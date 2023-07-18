@@ -111,10 +111,17 @@ impl<T> EventLoopBuilder<T> {
     )]
     #[inline]
     pub fn build(&mut self) -> EventLoop<T> {
-        static EVENT_LOOP_CREATED: OnceCell<()> = OnceCell::new();
-        if EVENT_LOOP_CREATED.set(()).is_err() {
-            panic!("Creating EventLoop multiple times is not supported.");
+        // Android absolutely, totally allows multiple event loops per process.
+        // Requires it in fact when an activity is relaunched by the OS after a
+        // configuration change.
+        #[cfg(not(target_os = "android"))]
+        {
+            static EVENT_LOOP_CREATED: OnceCell<()> = OnceCell::new();
+            if EVENT_LOOP_CREATED.set(()).is_err() {
+                panic!("Creating EventLoop multiple times is not supported.");
+            }
         }
+
         // Certain platforms accept a mutable reference in their API.
         #[allow(clippy::unnecessary_mut_passed)]
         EventLoop {
